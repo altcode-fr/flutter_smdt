@@ -443,7 +443,7 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
       // smdtSetDaemonsActivity
       case "smdtSetDaemonsActivity":
         final String packageName = call.argument("packageName");
-        final long timeout = ((int)call.argument("timeout")).longValue();
+        final long timeout = ((Number) call.argument("timeout")).longValue();
         final boolean enable = call.argument("enable");  
         invokeLibMethod(
             applicationContext,
