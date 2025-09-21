@@ -400,13 +400,13 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
 
       // (string) smdtGetAPIVersion
       case "smdtGetAPIVersion":
-        res = invokeLibMethod(
+        Object res1 = invokeLibMethod(
             applicationContext,
             "info_getApiVersion",
             new Class[] {},
             new Object[] {});
 
-        result.success(res.toString());
+        result.success(res1.toString());
         break;
 
       // smdtGetVolumeMaxMin
@@ -427,6 +427,7 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
 
         volumeMaxMin[1] = (res != null) ? (Integer) res : -1;
         result.success(volumeMaxMin);
+        break;
 
       // smdtGetSDCardPath
       case "smdtGetSDCardPath":
@@ -442,12 +443,12 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
       // smdtSetDaemonsActivity
       case "smdtSetDaemonsActivity":
         final String packageName = call.argument("packageName");
-        final int timeout = call.argument("timeout");
+        final long timeout = call.argument("timeout");
         final boolean enable = call.argument("enable");  
         invokeLibMethod(
             applicationContext,
             "sys_setDaemonsActivity",
-            new Class[] {String.class, int.class, boolean.class},
+            new Class[] {String.class, long.class, boolean.class},
             new Object[] {packageName, timeout, enable});
 
         result.success(null);
