@@ -38,35 +38,32 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
   private MethodChannel channel;
   private FlutterPluginBinding flutterPluginBinding;
   private Context applicationContext;
+  
+  /// ClassLoader global pour garder la classe chargée en mémoire
+  private Class<?> clazz;
 
-  private void listClassesInJar(File jarFile) {
-    try (ZipFile zip = new ZipFile(jarFile)) {
-      Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
-      while (entries.hasMoreElements()) {
-        String name = entries.nextElement().getName();
-        if (name.endsWith(".class") && name.contains("Smdt")) {
-          Log.d("PLUGIN", "Class trouvée: " + name.replace("/", "."));
-        }
-      }
-    } catch (Exception e) {
-      Log.e("PLUGIN", "Erreur lecture jar", e);
-    }
-  }
-
+  /// ClassLoader pour charger le jar dynamiquement
   private ClassLoader loadDynamicJar(Context context) throws Exception {
     String jarFileName;
 
+    /// Choix du jar en fonction de la version Android
     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) { // Android 10
       jarFileName = "smdt_old.jar";
     } else {
-      jarFileName = "smdt_new_dex.jar";
+      /// La librairie smdt.jar (smdt_new.jar) ne compile pas avec le ClassLoader
+      /// Utilisation d'une version modifiée smdt_new_dex.jar
+      /// J'ai utilisé d8 pour générer un dex à partir du jar :
+      /// d8 --release smdt_new.jar --output out/ --classpath ~/android/sdk/platforms/android-28/android.jar
+      /// Puis j'ai zippé le dex dans un jar : zip smdt_new_dex.jar ./out/classes.dex
+      jarFileName = "smdt_new_dex.jar"; 
     }
 
     Log.d("SmdtPlugin", "Loading jar file: " + jarFileName);
 
-    // Copie du jar depuis assets ou libs vers un répertoire exécutable
     File dexDir = context.getDir("dex", Context.MODE_PRIVATE);
     File jarFile = new File(dexDir, jarFileName);
+    
+    // Copie du jar depuis assets ou libs vers un répertoire exécutable
     if (!jarFile.exists()) {
       try (InputStream is = context.getAssets().open(jarFileName);
       FileOutputStream fos = new FileOutputStream(jarFile)) {
@@ -81,10 +78,10 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         throw e;
       }
     }
-
-    listClassesInJar(jarFile); // Liste les classes avant de copier
+    
     Log.d("SmdtPlugin", "Jar chargé : " + jarFile.getAbsolutePath());
-
+    
+    /// Définition du ClassLoader
     return new dalvik.system.DexClassLoader(
         jarFile.getAbsolutePath(),
         dexDir.getAbsolutePath(),
@@ -92,12 +89,10 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         context.getClassLoader());
   }
 
-  /// Invocation d'une méthode du jar dynamique
-  private Class<?> clazz;
-  public Object invokeLibMethod(Context context, String methodName, Class<?>[] paramTypes, Object[] params) {
-        
+  /// Construit le ClassLoader et charge la classe SmdtManager ou SmdtManagerNew
+  private void cacheClassLoader(Context context) {
     // Charge la classe une seule fois
-    if(clazz == null) {
+    if(this.clazz == null) {
       
       ClassLoader cl;
       
@@ -106,7 +101,8 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         cl = loadDynamicJar(context);
       } catch (Exception e) {
         Log.e("SmdtPlugin", "Error loading jar", e);
-        return null;
+        this.clazz = null;
+        return;
       }
 
       Log.d("SmdtPlugin", "Loading class for the first time");
@@ -122,8 +118,53 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         }
       } catch (ClassNotFoundException e) {
         Log.e("SmdtPlugin", "Class not found in the jar", e);
-        return null;
+        this.clazz = null;
+        return;
       }
+    }
+  }
+
+  @Override
+  public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+    this.flutterPluginBinding = binding;
+
+    // Create a MethodChannel that will handle communication between Flutter and
+    // Android
+    if (binding.getBinaryMessenger() == null) {
+      return;
+    }
+
+    channel = new MethodChannel(binding.getBinaryMessenger(), "smdt");
+    channel.setMethodCallHandler(this);
+
+    applicationContext = binding.getApplicationContext();
+
+    // Charge le ClassLoader et la classe SmdtManager ou SmdtManagerNew
+    cacheClassLoader(applicationContext);
+  }
+
+  @Override
+  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    Log.d("SmdtPlugin", "Method called: " + call.method);
+
+    try {
+      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) { // Android 10
+        onMethodCallOld(call, result);
+      } else {
+        onMethodCallNew(call, result);
+      }
+    } catch (Exception e) {
+      Log.e("SmdtPlugin", "Error handling method call", e);
+      result.error("ERROR", "Error handling method call: " + e.getMessage(), null);
+    }
+  }
+
+  /// Invocation d'une méthode du jar dynamique  
+  public Object invokeLibMethod(Context context, String methodName, Class<?>[] paramTypes, Object[] params) {
+
+    if (this.clazz == null) {
+      Log.e("SmdtPlugin", "Class not loaded, cannot invoke method: " + methodName);
+      return null;
     }
 
     try {
@@ -151,37 +192,6 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
     }
   }
 
-  @Override
-  public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
-    this.flutterPluginBinding = binding;
-
-    // Create a MethodChannel that will handle communication between Flutter and Android
-    if (binding.getBinaryMessenger() == null) {
-      return;
-    }
-
-    channel = new MethodChannel(binding.getBinaryMessenger(), "smdt");
-    channel.setMethodCallHandler(this);    
-
-    applicationContext = binding.getApplicationContext();
-  }
-
-  @Override
-  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    Log.d("SmdtPlugin", "Method called: " + call.method);
-    Log.d("SmdtPlugin", "SDK Version: " + android.os.Build.VERSION.SDK_INT);
-
-    try {
-      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) { // Android 10
-        onMethodCallOld(call, result);
-      } else {
-        onMethodCallNew(call, result);
-      }      
-    } catch (Exception e) {
-      Log.e("SmdtPlugin", "Error handling method call", e);
-      result.error("ERROR", "Error handling method call: " + e.getMessage(), null);      
-    }
-  }
 
   public void onMethodCallOld(@NonNull MethodCall call, @NonNull Result result) {
     Log.d("SmdtPluginOld", "Method called: " + call.method);
@@ -192,6 +202,17 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
       // (string) getPlatformVersion
       case "getPlatformVersion":
         result.success("Android " + android.os.Build.VERSION.RELEASE);
+        break;
+
+      // (string) smdtGetAPIVersion
+      case "smdtGetAPIVersion":
+        res = invokeLibMethod(
+            applicationContext,
+            "smdtGetAPIVersion",
+            new Class[] {},
+            new Object[] {});
+      
+        result.success(res.toString());
         break;
 
       // (string) smdtGetCurrentNetType
@@ -251,6 +272,17 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         break;
       case "smdtSetNavigationBar":
         result.success(null);
+        break;
+
+      // smdtGetSDCardPath
+      case "smdtGetSDCardPath":
+        res = invokeLibMethod(
+            applicationContext,
+            "smdtGetSDcardPath",
+            new Class[] {Context.class},
+            new Object[] {applicationContext});
+
+        result.success(res.toString());
         break;
 
       /// smdtGetVolumeMaxMin
@@ -364,6 +396,17 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
     switch (call.method) {
       case "getPlatformVersion":
         result.success("Android " + android.os.Build.VERSION.RELEASE);
+        break;
+
+      // (string) smdtGetAPIVersion
+      case "smdtGetAPIVersion":
+        res = invokeLibMethod(
+            applicationContext,
+            "info_getApiVersion",
+            new Class[] {},
+            new Object[] {});
+
+        result.success(res.toString());
         break;
 
       // smdtGetVolumeMaxMin

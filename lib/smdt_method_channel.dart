@@ -16,6 +16,12 @@ class MethodChannelSmdt extends SmdtPlatform {
   }
 
   @override
+  Future<String?> smdtGetAPIVersion() async {
+    final version = await methodChannel.invokeMethod<String>('smdtGetAPIVersion');
+    return version;
+  }
+
+  @override
   Future<List<int>> smdtGetVolumeMaxMin() async {
     final List<int> volumeRange = await methodChannel.invokeMethod<List<int>>('smdtGetVolumeMaxMin') ?? [0, 100];
     return volumeRange;

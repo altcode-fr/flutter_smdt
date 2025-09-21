@@ -82,4 +82,7 @@ abstract class SmdtPlatform extends PlatformInterface {
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
+  Future<String?> smdtGetAPIVersion() {
+    throw UnimplementedError('smdtGetAPIVersion() has not been implemented.');
+  }
 }

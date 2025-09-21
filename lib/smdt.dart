@@ -60,4 +60,8 @@ class Smdt {
   Future<String?> getPlatformVersion() {
     return SmdtPlatform.instance.getPlatformVersion();
   }
+
+  Future<String?> smdtGetAPIVersion() {
+    return SmdtPlatform.instance.smdtGetAPIVersion();
+  }
 }
