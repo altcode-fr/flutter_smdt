@@ -41,6 +41,7 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
   
   /// ClassLoader global pour garder la classe chargée en mémoire
   private Class<?> clazz;
+  private Object instance;
 
   /// ClassLoader pour charger le jar dynamiquement
   private ClassLoader loadDynamicJar(Context context) throws Exception {
@@ -170,21 +171,23 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
     try {
       
       // Obtient une instance de la classe SmdtManager ou SmdtManagerNew
-      Object instance;
-      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) { // Android 10
-      
-        // Appel de la méthode create dans l'ancienne version
-        Method createMethod = clazz.getMethod("create", Context.class);
-        instance = createMethod.invoke(null, context);
-      } else {
-      
-        // Appel de la méthode getInstance dans la nouvelle version
-        Method createMethod = clazz.getMethod("getInstance", Context.class);
-        instance = createMethod.invoke(null, context);
+      if (this.instance == null) {
+        Log.d("SmdtPlugin", "Creating instance of SmdtManager for the first time");
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) { // Android 10
+        
+          // Appel de la méthode create dans l'ancienne version
+          Method createMethod = clazz.getMethod("create", Context.class);
+          this.instance = createMethod.invoke(null, context);
+        } else {
+        
+          // Appel de la méthode getInstance dans la nouvelle version
+          Method createMethod = clazz.getMethod("getInstance", Context.class);
+          this.instance = createMethod.invoke(null, context);
+        }
       }
 
       // Appel de la méthode demandée
-      return clazz.getMethod(methodName, paramTypes).invoke(instance, params);
+      return clazz.getMethod(methodName, paramTypes).invoke(this.instance, params);
 
     } catch (Exception e) {
       Log.e("SmdtPlugin", "Error invoking method: " + methodName, e);
