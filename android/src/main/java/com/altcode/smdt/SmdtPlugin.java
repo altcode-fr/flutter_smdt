@@ -251,6 +251,17 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         result.success(res.toString());
         break;
 
+      // (string) smdtGetModel
+      case "smdtGetModel":
+        res = invokeLibMethod(
+            applicationContext,
+            "getAndroidModel",
+            new Class[] {},
+            new Object[] {});
+      
+        result.success(res.toString());
+        break;
+
       /// (int) smdtGetVolume
       case "smdtGetVolume":
         res = invokeLibMethod(
@@ -517,6 +528,17 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
         res = invokeLibMethod(
             applicationContext,
             "info_getBoardType",
+            new Class[] {},
+            new Object[] {});
+      
+        result.success(res.toString());
+        break;
+
+      // (string) smdtGetModel
+      case "smdtGetModel":
+        res = invokeLibMethod(
+            applicationContext,
+            "info_getModel",
             new Class[] {},
             new Object[] {});
       

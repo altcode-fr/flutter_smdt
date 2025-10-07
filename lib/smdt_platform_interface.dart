@@ -47,6 +47,10 @@ abstract class SmdtPlatform extends PlatformInterface {
     throw UnimplementedError('smdtGetAndroidBoardType() has not been implemented.');
   }
 
+  Future<String?> smdtGetModel() {
+    throw UnimplementedError('smdtGetModel() has not been implemented.');
+  }
+
   Future<void> smdtSetStatusBar(bool enable) {
     throw UnimplementedError('smdtSetStatusBar() has not been implemented.');
   }

@@ -59,6 +59,12 @@ class MethodChannelSmdt extends SmdtPlatform {
   }
 
   @override
+  Future<String?> smdtGetModel() async {
+    final version = await methodChannel.invokeMethod<String>('smdtGetModel');
+    return version;
+  }
+
+  @override
   Future<void> smdtSetStatusBar(bool enable) async {
     await methodChannel.invokeMethod<void>('smdtSetStatusBar', <String, dynamic>{'enable': enable});
   }

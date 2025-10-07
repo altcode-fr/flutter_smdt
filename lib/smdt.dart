@@ -25,6 +25,10 @@ class Smdt {
     return SmdtPlatform.instance.smdtGetAndroidBoardType();
   }
 
+  Future<String?> smdtGetModel() {
+    return SmdtPlatform.instance.smdtGetModel();
+  }
+
   Future<void> smdtSetStatusBar(bool enable) {
     return SmdtPlatform.instance.smdtSetStatusBar(enable);
   }
