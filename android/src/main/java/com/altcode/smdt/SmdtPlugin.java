@@ -301,18 +301,7 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
 
       /// smdtGetVolumeMaxMin
       case "smdtGetVolumeMaxMin":
-        res = invokeLibMethod(
-            applicationContext,
-            "smdtGetVolume",
-            new Class[] {Context.class},
-            new Object[] {applicationContext});
-      
-        if (res != null) {
-          result.success(new int[] {(Integer) res, 0});
-        } else {
-          result.error("UNAVAILABLE", "SmdtManagerOld is not available", null);
-          Log.d("SmdtPluginOld", "SmdtManager is not available");
-        }
+        result.success(new int[] {16, 0});
         break;
 
       /// (void) smdtSetVolume(int)
@@ -322,7 +311,7 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
             applicationContext,
             "smdtSetVolume",
             new Class[] {Context.class, int.class},
-            new Object[] {applicationContext, volume});
+            new Object[] {applicationContext, Math.max(0, Math.min(16, volume))});
       
         result.success(null);
         break;
