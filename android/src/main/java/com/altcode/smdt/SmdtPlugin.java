@@ -148,6 +148,11 @@ public class SmdtPlugin implements FlutterPlugin, MethodCallHandler {
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
     Log.d("SmdtPlugin", "Method called: " + call.method);
 
+    if(this.clazz == null) {
+      result.success(null);
+      return;
+    }
+
     try {
       if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) { // Android 10
         onMethodCallOld(call, result);
